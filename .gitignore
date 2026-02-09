@@ -6,6 +6,13 @@ venv/
 .venv/
 env/
 
+# 로컬 도구 설정
+.agent/
+.claude/
+
+# LangGraph Studio 캐시
+.langgraph_api/
+
 # Python 캐시
 __pycache__/
 *.py[cod]
@@ -24,6 +31,7 @@ __pycache__/
 # 시스템 파일
 .DS_Store
 Thumbs.db
+nul
 
 # ChromaDB 로컬 저장소
 chroma_data/

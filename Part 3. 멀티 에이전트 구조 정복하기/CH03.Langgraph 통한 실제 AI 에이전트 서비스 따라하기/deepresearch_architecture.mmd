@@ -1,0 +1,52 @@
+graph TD
+    subgraph Main["🧠 Main Graph (AgentState + MemorySaver)"]
+        START((START)) --> clarify["clarify_with_user<br/>━━━━━━━━━━━━━<br/>• Structured Output: ClarifyWithUser<br/>• 최대 1회 질문 제한<br/>• clarification_asked 플래그"]
+
+        clarify -->|"need_clarification=True<br/>(clarification_asked=True)"| END_HITL((END<br/>Human-in-the-Loop))
+        END_HITL -.->|"사용자 답변 → 재실행<br/>(같은 thread_id)"| clarify
+
+        clarify -->|"need_clarification=False<br/>OR clarification_asked=True"| brief["write_research_brief<br/>━━━━━━━━━━━━━<br/>• Structured Output: ResearchQuestion<br/>• Supervisor 시스템 프롬프트 초기화<br/>• Command API로 라우팅"]
+
+        brief -->|"Command(goto='research_supervisor')<br/>research_brief + supervisor_messages"| supervisor_wrapper["research_supervisor<br/>(Supervisor Subgraph 래퍼)"]
+
+        supervisor_wrapper --> report["final_report_generation<br/>━━━━━━━━━━━━━<br/>• notes 종합<br/>• 최종 Markdown 보고서<br/>• gpt-4o"]
+
+        report --> END_FINAL((END))
+    end
+
+    subgraph Supervisor["📋 Supervisor Subgraph (SupervisorState)"]
+        S_START((START)) --> sup["supervisor<br/>━━━━━━━━━━━━━<br/>• bind_tools: ConductResearch,<br/>  ResearchComplete<br/>• 연구 계획 수립<br/>• gpt-4o"]
+
+        sup -->|"Command(goto='supervisor_tools')"| sup_tools["supervisor_tools<br/>━━━━━━━━━━━━━<br/>• ConductResearch → 병렬 연구 실행<br/>• ResearchComplete → END<br/>• asyncio.gather 병렬 처리<br/>• 최대 5개 동시, 3회 반복"]
+
+        sup_tools -->|"연구 결과 수집<br/>tool_messages + notes"| sup
+        sup_tools -->|"ResearchComplete<br/>OR iterations > 3"| S_END((END))
+    end
+
+    subgraph Researcher["🔍 Researcher Subgraph (ResearcherState → ResearcherOutputState)"]
+        R_START((START)) --> res["researcher<br/>━━━━━━━━━━━━━<br/>• bind_tools: exa_search<br/>• 웹 검색 수행<br/>• gpt-4o"]
+
+        res -->|"Command(goto='researcher_tools')"| res_tools["researcher_tools<br/>━━━━━━━━━━━━━<br/>• exa_search 실행<br/>• EXA API 호출"]
+
+        res_tools -->|"tool_messages"| res
+        res_tools -->|"도구 호출 없음<br/>OR iterations >= 5"| compress["compress_research<br/>━━━━━━━━━━━━━<br/>• 연구 결과 압축<br/>• gpt-4o-mini"]
+
+        compress --> R_END((END))
+    end
+
+    supervisor_wrapper -.->|"ainvoke"| S_START
+    S_END -.->|"notes 반환"| supervisor_wrapper
+    sup_tools -.->|"asyncio.gather<br/>(N개 병렬)"| R_START
+    R_END -.->|"compressed_research"| sup_tools
+
+    classDef mainNode fill:#4A90D9,stroke:#2C5F8A,color:#fff,stroke-width:2px
+    classDef supNode fill:#F5A623,stroke:#C47D0E,color:#fff,stroke-width:2px
+    classDef resNode fill:#7ED321,stroke:#5A9A18,color:#fff,stroke-width:2px
+    classDef startEnd fill:#D0021B,stroke:#9B0015,color:#fff,stroke-width:2px
+    classDef hitlNode fill:#9013FE,stroke:#6B0EBE,color:#fff,stroke-width:2px
+
+    class clarify,brief,supervisor_wrapper,report mainNode
+    class sup,sup_tools supNode
+    class res,res_tools,compress resNode
+    class START,END_FINAL,S_START,S_END,R_START,R_END startEnd
+    class END_HITL hitlNode
