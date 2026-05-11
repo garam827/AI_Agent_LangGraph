@@ -1,0 +1,23 @@
+#### TB_CUSTOMERS (Customers Table)
+- customer_id: INT (Auto-incremented primary key)
+- customer_name: VARCHAR(100)
+
+#### TB_PRODUCTS (Products Table)
+- product_id: INT (Auto-incremented primary key)
+- product_name: VARCHAR(100)
+- price: DECIMAL(10, 2)
+
+#### TB_ORDER_STATUS (Order Status Table)
+- status_id: INT (Auto-incremented primary key)
+- status_name: VARCHAR(50)
+
+#### TB_ORDERS (Orders Table)
+- order_id: INT (Primary key)
+- customer_id: INT (References TB_CUSTOMERS)
+- order_date: DATETIME
+- status_id: INT (References TB_ORDER_STATUS)
+
+#### TB_ORDER_ITEMS (Order Items Table)
+- order_id: INT (References TB_ORDERS)
+- product_id: INT (References TB_PRODUCTS)
+- quantity: INT
